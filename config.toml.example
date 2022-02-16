@@ -1,0 +1,20 @@
+[project]
+name = "Binary Bot"
+
+[environment]
+    [environment.practice]
+        is_enable = false
+        change_balance = "PRACTICE"
+        bet_money = 1
+        martingale = 1.5
+        username = "email"
+        password = "password"
+        ratio = "GBPUSD"
+    [environment.real]
+        is_enable = true
+        change_balance = "REAL"
+        bet_money = 15000
+        martingale = 1.5
+        username = "email"
+        password = "password"
+        ratio = "GBPUSD"

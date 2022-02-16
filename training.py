@@ -6,7 +6,8 @@ import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, LSTM, BatchNormalization
 from tensorflow.keras.callbacks import ModelCheckpoint
-from tensorflow.keras.callbacks import TensorBoard, EarlyStopping
+from tensorflow.keras.callbacks import TensorBoard
+from sklearn.metrics import accuracy_score
 from iq import get_data_needed, login
 import time
 
@@ -82,7 +83,7 @@ def preprocess_df(df):
         y.append(target)  # y is the targets
 
     return np.array(X), y
-
+    
 
 def train_data():
     iq = login()
@@ -169,10 +170,10 @@ def train_data():
     train_y = np.asarray(train_y)
     validation_y = np.asarray(validation_y)
 
-    LEARNING_RATE = 0.001  # isso mesmo
-    EPOCHS = 40  # how many passes through our data #20 was good
+    LEARNING_RATE = 0.001  # that's right
+    EPOCHS = 50  # how many passes through our data #20 was good
     # how many batches? Try smaller batch if you're getting OOM (out of memory) errors.
-    BATCH_SIZE = 16
+    BATCH_SIZE = 32
     # a unique name for the model
     NAME = f"{LEARNING_RATE}-{SEQ_LEN}-SEQ-{FUTURE_PERIOD_PREDICT}-{EPOCHS}-{BATCH_SIZE}-PRED-{int(time.time())}"
     print(NAME)
@@ -237,6 +238,8 @@ def train_data():
         callbacks=[tensorboard, checkpoint, earlyStoppingCallback],
     )
 
+    print(f'History : {history}')
+
     """
     
     THIS CODE PURPOSE IS FOR ACCURACY TEST ONLY
@@ -262,5 +265,27 @@ def train_data():
     
     #acc = accuracy_score(validation_y,prediction)
     """
+
+    prediction = pd.DataFrame(model.predict(validation_x))
+    
+    m = np.zeros_like(prediction.values)
+    m[np.arange(len(prediction)), prediction.values.argmax(1)] = 1
+    
+    prediction = pd.DataFrame(m, columns = prediction.columns).astype(int)
+    prediction = prediction.drop(columns = {1})
+    validation_y = pd.DataFrame(validation_y)
+    
+    high_acurate = prediction.loc[prediction[0] > 0.55] # VALUES HE PREDICTED 0 WITH PROB GREATER THAN 0.55
+    
+    high_index = high_acurate.index     # GET THE INDEX OF THOSE WHO HAD PROB ABOVE THE SPECIFIED
+    
+    validation_y_used = pd.DataFrame(validation_y) # TRANSFORM NUMPY TO DATAFRAME
+    prediction_compare  = validation_y_used.loc[high_index] # LOCATES THE INDEXS THAT HAVE BEEN SEPARATED
+    prediction_compare[0].value_counts() # SHOW VALUES. HOW WE CHOOSE 0 ON THE OTHER THE 0 HAS TO HAVE A BIGGER PROB
+    len(prediction)
+    
+    acc = accuracy_score(validation_y,prediction)
+
+    print(f'Accuracy : {acc*100}%')
 
     return filepath

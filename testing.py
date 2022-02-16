@@ -8,6 +8,7 @@ from iq import fast_data, higher, lower, login, get_balance
 from training import train_data
 import tensorflow as tf
 import sys
+import toml
 
 try:
     gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -106,10 +107,13 @@ def preprocess_prediciton(iq):
     return np.array(X)
 
 
+
+config = toml.load('config.toml')
+
 if(len(sys.argv) == 1):
-    martingale = 1.5
-    bet_money = 15000
-    ratio = 'EURUSD'
+    martingale = config.get('environment').get('practice').get('martingale') if config.get('environment').get('practice').get('is_enable') else config.get('environment').get('real').get('martingale')
+    bet_money = config.get('environment').get('practice').get('bet_money') if config.get('environment').get('practice').get('is_enable') else config.get('environment').get('real').get('bet_money')
+    ratio = config.get('environment').get('practice').get('ratio') if config.get('environment').get('practice').get('is_enable') else config.get('environment').get('real').get('ratio')
 elif(len(sys.argv) != 4):
     print("The correct pattern is: python testing.py EURUSD (or other currency) INITIAL_BET(value starting in 1$ MIN) MARTINGALE (your martingale ratio default = 2)")
     print("\n\nEXAMPLE:\npython testing.py EURUSD 1 3")
@@ -117,7 +121,7 @@ elif(len(sys.argv) != 4):
 else:
     bet_money = int(sys.argv[2])  # QUANTITY YOU WANT TO BET EACH TIME
     ratio = sys.argv[1]
-    martingale = sys.argv[3]
+    martingale = float(sys.argv[3])
 
 SEQ_LEN = 5  # how long of a preceeding sequence to collect for RNN, if you modify here, remember to modify in the other files too
 # how far into the future are we trying to predict , if you modify here, remember to modify in the other files too
@@ -132,9 +136,9 @@ iq = login()
 i = 0
 bid = True
 bets = []
-MONEY = 15000
-trade = False
-
+MONEY = config.get('environment').get('practice').get('bet_money') if config.get('environment').get('practice').get('is_enable') else config.get('environment').get('real').get('bet_money')
+trade = True
+id = None
 
 while(1):
     if i >= 10 and i % 2 == 0:
@@ -155,12 +159,12 @@ while(1):
         i = i + 1
 
     if datetime.datetime.now().second == 59 and i % 2 == 1:
-        if result[0][0] > 0.5 and trade == False:
+        if result[0][0] > 0.5:
             print('Choose PUT')
             id = lower(iq, bet_money, ratio)
             i = i + 1
             trade = True
-        elif result[0][0] < 0.5 and trade == False:
+        elif result[0][0] < 0.5:
             print('Choose CALL')
             id = higher(iq, bet_money, ratio)
             i = i + 1
@@ -168,10 +172,10 @@ while(1):
         else:
             print('Choose SKIP')
             trade = False
-            i = i + 1
+            i = i + 1        
 
         if trade:
-            time.sleep(3)
+            print(f'Check Win : {iq.check_win_v3(id)}')
 
             tempo = datetime.datetime.now().second
             while(tempo != 1):  # wait till 1 to see if win or lose
@@ -186,7 +190,7 @@ while(1):
 
             if win == ['win']:
                 print(f'Balance : {get_balance(iq)}')
-                bet_money = 15000
+                bet_money = config.get('environment').get('practice').get('bet_money') if config.get('environment').get('practice').get('is_enable') else config.get('environment').get('real').get('bet_money')
 
             elif win == ['loose']:
                 print(f'Balance : {get_balance(iq)}')
@@ -196,8 +200,3 @@ while(1):
                 print(f'Balance : {get_balance(iq)}')
                 bets.append(0)
                 print(f'Bet Money : {bet_money}')
-
-            if bet_money > 112000:
-                bet_money = 15000
-
-            trade = False

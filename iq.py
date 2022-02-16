@@ -1,26 +1,24 @@
-# -*- coding: utf-8 -*-
-"""
-Spyder Editor
-
-Este é um arquivo de script temporário.
-"""
-
 import logging
 import time
 from iqoptionapi.stable_api import IQ_Option
 import pandas as pd
-
+import toml
 
 def login(verbose=False, iq=None, checkConnection=False):
+    config = toml.load('config.toml')
 
     if verbose:
         logging.basicConfig(level=logging.DEBUG,
                             format='%(asctime)s %(message)s')
 
-    if iq == None:
+    if iq == None:  
         print("Trying to connect to IqOption")
+
+        username = config.get('environment').get('practice').get('username') if config.get('environment').get('practice').get('is_enable') else config.get('environment').get('real').get('username')
+        password = config.get('environment').get('practice').get('password') if config.get('environment').get('practice').get('is_enable') else config.get('environment').get('real').get('password')
+
         # YOU HAVE TO ADD YOUR USERNAME AND PASSWORD
-        iq = IQ_Option('USERNAME', 'PASSWORD')
+        iq = IQ_Option(username, password)
         iq.connect()
 
     if iq != None:
@@ -36,7 +34,8 @@ def login(verbose=False, iq=None, checkConnection=False):
                 break
             time.sleep(3)
 
-    iq.change_balance("REAL")  # or real
+    change_balance = config.get('environment').get('practice').get('change_balance') if config.get('environment').get('practice').get('is_enable') else config.get('environment').get('real').get('change_balance')
+    iq.change_balance(change_balance)  # or real
     return iq
 
 
